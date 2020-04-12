@@ -131,7 +131,7 @@ class FrechetInceptionDistance(object):
 		The Frechet Inception Distance between the real and generated data.
 	"""
 
-	def __init__(self, generator, image_range=, 
+	def __init__(self, generator, image_range= 
 		generator_postprocessing=None):
 
 		self._inception_v3 = None
