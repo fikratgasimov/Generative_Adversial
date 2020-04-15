@@ -13,7 +13,7 @@ from PIL import Image
 from tqdm import tqdm
 import numpy as np
 import os
-
+import FID
 import matplotlib.pyplot as plt
 
 
@@ -117,15 +117,15 @@ class CGAN:
 		model.add(BatchNormalization(momentum=0.9))
 		model.add(Activation('relu'))
 		
-		model.add(Reshape((7,7,256)))
+		model.add(Reshape((7, 7, 256)))
 		model.add(Dropout(0.4))
 		
-		model.add(Conv2DTranspose(128,(5,5),padding='same'))
+		model.add(Conv2DTranspose(128, (5, 5), padding='same'))
 		model.add(BatchNormalization(momentum=0.9))
 		model.add(Activation('relu'))
 		model.add(UpSampling2D())
 		
-		model.add(Conv2DTranspose(64,(3,3),padding='same'))
+		model.add(Conv2DTranspose(64, (3, 3), padding='same'))
 		model.add(BatchNormalization(momentum=0.9))
 		model.add(Activation('relu'))
 		model.add(UpSampling2D())
