@@ -58,32 +58,3 @@ class celeba(keras.utils.Sequence):
             y[i] = self.labels[ID]
         # Convert class vector to binary class vector
         return X, keras.utils.to_categorical(y, num_classes = self.n_classes)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            
-
-
