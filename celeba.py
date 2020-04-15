@@ -2,12 +2,12 @@ import numpy as np
 import keras
 
 class celeba(keras.utils.Sequence):
-    def __init__(self, list_IDS, labels, batch_size = 4, dim = (32,32,32),
+    def __init__(self, list_IDs, labels, batch_size = 4, dim = (32,32,32),
                  n_channels = 3, n_classes = 40, shuffle = True ):
         # Initialization
         self.dim = dim
         self.batch_size = batch_size
-        self.list_IDs = list_IDS
+        self.list_IDs = list_IDs
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.shuffle = shuffle
