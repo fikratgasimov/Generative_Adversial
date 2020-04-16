@@ -194,7 +194,7 @@ class CGAN:
 
 		#Load Dataset
 		#(x_train,y_train),(_,_) = mnist.load_data()
-		(x_train,y_train),(_,_) = fashion_mnist.load_data()
+		(x_train, y_train),(_,_) = fashion_mnist.load_data()
 
 		# Normalizing this way doesn't work during training.
 		x_train = (x_train.astype('float32') - 127.5) / 127.5
@@ -290,42 +290,7 @@ class CGAN:
 
 		self.plot_loss(losses)
 if __name__ == '__main__':
-	# LATEN size#
-	seed_size = 100
-	# Random input for Generator
-	random_input = Input(shape=(seed_size,))
-	# Corresponding label
-	label = Input(shape=(1,))
-
-	# Build and compile Generator
-	discriminator = build_discriminator()
-	discriminator.compile(loss='binary_crossentropy', optimizer= RMSprop(lr=0.0008, clipvalue=1.0, decay=6e-8),
-						  metrics=['accuracy'])
-	# Build generator
-	generator = build_generator(seed_size)
-
-	# Generator Input z
-	# Latent Input vector Z
-	label_embeddings = Flatten()(Embedding(10, 100)(label))
-	input = multiply([noise, label_embeddings])
-	generated_image = model(input)
-
-	# Only train Generator for Conbined Model
-	discriminator.trainable = False
-
-	# Discriminator takes Generated image as input
-	# and determines validity
-	real_or_fake = discriminator(generated_image)
-
-	# Stack generator and discriminator in a combined model
-	# Train generator to deceive discriminator
-	# Pass input denoted as Z
-	combined = model(input, real_or_fake)
-	combined.compile(loss='binary_crossentropy', optimizer= RMSprop(lr=0.0008, clipvalue=1.0, decay=6e-8))
-	gan = CGAN()
-	gan.train(generator = generator
-			  ,discriminator = discriminator
-			  ,combined = combined
-			  ,epochs=50000
+	cgan = CGAN()
+	cgan.train(epochs=50000
 			  ,batch_size=32)
-	plt.generated_images(generator)
+
