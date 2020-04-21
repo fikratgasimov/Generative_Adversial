@@ -16,7 +16,7 @@ import math
 import cv2
 import numpy as np
 import os
-
+import csv
 import matplotlib.pyplot as plt
 
 
@@ -30,16 +30,16 @@ class CGAN:
 		self.shape = (self.rows, self.cols, self.channels)
 		self.latent_size = 100
 		self.sample_rows = 2
-		self.sample_cols = 5
-		self.sample_path = 'images'
-		self.num_classes = 10
+		self.sample_cols = 2
+		self.sample_path = 'data/img_align_celeba'
+		self.num_classes = 40
 
 		optimizer = RMSprop(lr=0.0008, clipvalue=1.0, decay=6e-8)
 		
 		
 		image_shape = self.shape
 		seed_size = self.latent_size
-		
+
 		
 		# Get the discriminator and generator Models
 		# Build and compile discriminator
@@ -50,12 +50,13 @@ class CGAN:
 		# Build and Compile Generator
 		print("Build Generator")
 		self.generator = self.build_generator()
-		self.generator.compile(loss = 'binary_crossentropy', optimizer= optimizer)
 
 		# Random input for Generator
 		random_input = Input(shape=(seed_size,))
 		# Corresponding label
-		label = Input(shape=(1,))	
+		label = Input(shape=(1,))
+
+
 		# Pass noise/random_input and label as input to the generator
 		# this is generated image encompassing two variables
 		generated_image = self.generator([random_input, label])
@@ -77,14 +78,19 @@ class CGAN:
 		seed_size = self.latent_size
 
 		model = Sequential()
-		model.add(Dense(7 * 7 * 256, input_dim=seed_size))
+		model.add(Dense(8 * 8 * 512, input_dim=seed_size))
 		model.add(BatchNormalization(momentum=0.9))
 		model.add(Activation('relu'))
 
-		model.add(Reshape((7, 7, 256)))
+		model.add(Reshape((8, 8, 512)))
 		model.add(Dropout(0.4))
 
-		model.add(Conv2DTranspose(128, (5, 5), padding='same'))
+		model.add(Conv2DTranspose(256, (5, 5), padding='same'))
+		model.add(BatchNormalization(momentum=0.9))
+		model.add(Activation('relu'))
+		model.add(UpSampling2D())
+
+		model.add(Conv2DTranspose(128, (3, 3), padding='same'))
 		model.add(BatchNormalization(momentum=0.9))
 		model.add(Activation('relu'))
 		model.add(UpSampling2D())
@@ -93,12 +99,11 @@ class CGAN:
 		model.add(BatchNormalization(momentum=0.9))
 		model.add(Activation('relu'))
 		model.add(UpSampling2D())
-
 		model.add(Conv2DTranspose(32, (3, 3), padding='same'))
 		model.add(BatchNormalization(momentum=0.9))
 		model.add(Activation('relu'))
 
-		model.add(Conv2DTranspose(1, (3, 3), padding='same'))
+		model.add(Conv2DTranspose(3, (3, 3), padding='same'))
 		model.add(Activation('sigmoid'))
 		model.summary()
 
@@ -199,11 +204,12 @@ class CGAN:
 		plt.title('Variation of losses over epochs')
 		plt.grid(True)
 		plt.show()
-	def train(self, epochs=10000, batch_size=128, save_freq=200):
+	def train(self, epochs=10000, batch_size=4, save_freq=200):
 
-		data_dir = "data/img_align_celeba"
+		data_dir = "small_image_set"
 
 		filepaths = os.listdir(data_dir)
+		print("File path", filepaths)
 
 		seed_size = self.latent_size
 		half_batch = int(batch_size / 2)
@@ -213,7 +219,7 @@ class CGAN:
 		d_loss_logs_f = []
 		g_loss_logs = []
 		n_iterations = math.floor(len(filepaths) / batch_size)
-		print_function(n_iterations)
+		# print_function(n_iterations)
 
 		for epoch in range(epochs):
 
@@ -225,33 +231,44 @@ class CGAN:
 				X_train = self.get_batch(glob(os.path.join(data_dir, '*.jpg'))
 											[ite * batch_size:(ite + 1) * batch_size], 64, 64, 'RGB')
 
+				print('Xtrain:', X_train)
+
 				# Normalizing this way
 				X_train = (X_train.astype(np.float32) - 127.5) / 127.5
 				X_train = np.array([self.add_noise(image) for image in X_train])
 				print(X_train.shape[0])
-				idx = np.random.rand(0, X_train.shape[0], half_batch)
+				idx = np.random.randint(0, X_train.shape[0], half_batch)
+
 				imgs = X_train[idx]
-				noise = np.random.normal(0, 1, size=[half_batch, seed_size])
-				X_fake = self.generator.predict(noise)
+
+
+				noise = np.random.normal(0, 1, (half_batch, seed_size))
+
+				y = np.array([1] * half_batch)
+				X_fake = self.generator.predict([noise, y])
 
 				# Train Disciminator
-				d_loss_real = self.discriminator.train_on_batch(imgs, np.ones((half_batch, 1)))
-				d_loss_fake = self.discriminator.train_on_batch(X_fake, np.zeros((half_batch, 1)))
+				d_loss_real = self.discriminator.train_on_batch([imgs, y], np.ones((half_batch, 1)))
+				d_loss_fake = self.discriminator.train_on_batch([X_fake, y], np.zeros((half_batch, 1)))
 				d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
 
-				# Train Generator
-				noise = np.random.normal(0, 1, size=[batch_size, seed_size])
 
-				# Generate want Discriminator to label the genrated samples
+				# Train Generator
+				noise = np.random.normal(0, 1, (batch_size, seed_size))
+
+
+				# Generate want Discriminator to label the	 genrated samples
 				# as valid ones
 				# Valid labels for generated images,
 				sampled_labels = np.random.randint(0, self.num_classes, batch_size).reshape(-1, 1)
 				valid_y = np.array([1] * batch_size)
+
 				# due to maximizing Discriminator Loss
 				g_loss = self.combined_model.train_on_batch([noise, sampled_labels], valid_y)
 
+
 				print("%d %d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch, ite, d_loss[0],
-																			 100 * d_loss[1], g_loss))
+																			 100 * d_loss[1], g_loss[0]))
 
 				# Append the logs with the loss values in each training step
 				d_loss_logs_r.append([epoch, d_loss[0]])
@@ -264,10 +281,10 @@ class CGAN:
 
 				# If at save_frequency => save generated image samples
 				if ite % save_freq == 0:
-					self.save_imgs(epoch, ite)
+					# self.save_imgs(epoch, ite)
 					plt.plot(d_loss_logs_r_a[:, 0], d_loss_logs_r_a[:, 1], label="Discriminator Loss-Real")
 					plt.plot(d_loss_logs_f_a[:, 0], d_loss_logs_f_a[:, 1], label="Discriminator Loss-Fake")
-					plt.plot(g_loss_logs_a[:, 0], g_loss_logs_a[:, 1], label="Generator Loss")
+					# plt.plot(g_loss_logs_a[:, 0], g_loss_logs_a[:, 1], label="Generator Loss")
 					plt.xlabel('Epoch-iterations')
 					plt.ylabel('Loss')
 					plt.legend()
@@ -280,10 +297,6 @@ class CGAN:
 				json_file.write(model_json)
 				self.generator.save_weights("model" + str(epoch) + ".h5")
 				print("Save model to disk")
-
-
-
-		
 
 	def save_imgs(self, epoch,noise):
 		r, c = self.sample_rows, self.sample_cols
@@ -303,7 +316,7 @@ class CGAN:
 		fig.savefig(filename)
 		plt.close()
 
-if __name__ == '__main__':
-	cgan = CGAN()
-	cgan.train(epochs=6,batch_size=32, save_freq=200)
-
+# if __name__ == '__main__':
+# 	cgan = CGAN()
+# 	cgan.train(epochs=6,batch_size=32, save_freq=200)
+#
