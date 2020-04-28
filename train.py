@@ -241,7 +241,7 @@ class CGAN:
 			for ite in range(n_iterations):
 
 				X_train = self.get_batch(glob(os.path.join(data_dir, '*.jpg'))
-											[ite * batch_size:(ite + 1) * batch_size], 64, 64, 'RGB')
+						[ite * batch_size:(ite + 1) * batch_size], 64, 64, 'RGB')
 
 				print('Xtrain:', X_train)
 
@@ -284,7 +284,7 @@ class CGAN:
 
 
 				print("%d %d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch, ite, d_loss[0],
-																			 100 * d_loss[1], g_loss[0]))
+							100 * d_loss[1], g_loss[0]))
 
 				# Append the logs with the loss values in each training step
 				d_loss_logs_r.append([epoch, d_loss[0]])
